@@ -6,15 +6,16 @@
 #include <chrono>
 #include <memory>
 #include <string>
-//#include <tuple>
+#include <fstream>
 #include <atomic>
 #include <mutex>
 #include <thread>
+#include <functional>
 #include <unordered_map>
 //#include <codecvt>
+//#include <tuple>
 //#include <complex>
 //#include <exception>
-#include <functional>
 //#include <initializer_list>
 //#include <iterator>
 //#include <limits>
@@ -56,27 +57,7 @@ namespace ros_bridge_client
 
         ROSBridgeClient();
 
-        bool initialize()
-        {
-            res_ = zmq_bind(publisher_, pub_address_.c_str());
-            if (res_ != 0)
-            {
-                std::cerr << "Failed bind to " << pub_address_ << std::endl;
-                return false;
-            }
-            std::cout << "Succeed bind to publish address " << pub_address_ << std::endl;
-
-            res_ = zmq_connect(subscriber_, sub_address_.c_str());
-            res_ = zmq_setsockopt(subscriber_, ZMQ_SUBSCRIBE, namespace_.data(), namespace_.size());
-            if (res_ != 0)
-            {
-                std::cerr << "Failed connect to " << sub_address_ << std::endl;
-                return false;
-            }
-            std::cout << "Succeed subscribe to address " << sub_address_ << std::endl;
-
-            return true;
-        }
+        bool initialize();
 
         void start();
 

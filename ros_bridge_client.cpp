@@ -9,6 +9,63 @@ namespace ros_bridge_client
         subscriber_ = zmq_socket(context_, ZMQ_SUB);
     }
 
+    bool ROSBridgeClient::initialize()
+    {
+        Json::Reader reader;
+        Json::Value param_root;
+        //从文件中读取，保证当前文件有demo.json文件
+        std::ifstream param_stream("../param.json", std::ios::in);
+
+        if (param_stream.is_open())
+        {
+            if (reader.parse(param_stream, param_root))
+            {
+                if (!param_root["namespace"].asString().empty())
+                {
+                    namespace_ = param_root["namespace"].asString();
+                    std::cout << "Get namespace from parameters file: " << namespace_ << std::endl;
+                }
+
+                if (!param_root["pub_address"].asString().empty())
+                {
+                    pub_address_ = param_root["pub_address"].asString();
+                    std::cout << "Get publish address from parameters file: " << pub_address_ << std::endl;
+                }
+
+                if (!param_root["sub_address"].asString().empty())
+                {
+                    sub_address_ = param_root["sub_address"].asString();
+                    std::cout << "Get subscribe address from parameters file: " << sub_address_ << std::endl;
+                }
+            }
+        }
+        else
+        {
+            std::cout << "Error opening file\n";
+        }
+
+
+
+        res_ = zmq_bind(publisher_, pub_address_.c_str());
+        if (res_ != 0)
+        {
+            std::cerr << "Failed bind to " << pub_address_ << std::endl;
+            return false;
+        }
+        std::cout << "Succeed bind to publish address " << pub_address_ << std::endl;
+
+        res_ = zmq_connect(subscriber_, sub_address_.c_str());
+        res_ = zmq_setsockopt(subscriber_, ZMQ_SUBSCRIBE, namespace_.data(), namespace_.size());
+        if (res_ != 0)
+        {
+            std::cerr << "Failed connect to " << sub_address_ << std::endl;
+            return false;
+        }
+        std::cout << "Succeed subscribe to address " << sub_address_ << std::endl;
+
+        return true;
+    }
+
     void ROSBridgeClient::publishPoint(std::string topic_name, std::string frame_id, float x, float y,
                                        float z)
     {
