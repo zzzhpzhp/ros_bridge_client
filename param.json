@@ -4,5 +4,7 @@
   // 发送目的地址
   "pub_address": "tcp://*:5556",
   // 远程主机地址
-  "sub_address": "tcp://localhost:5557"
+  "sub_address": "tcp://localhost:5557",
+  // 最高话题接收频率
+  "frequency": 100
 }

@@ -68,10 +68,12 @@ namespace ros_bridge_client
         void publishTf(std::string topic_name, std::string frame_id, std::string child_frame_id,
                        float x, float y, float theta);
 
-        void publishScan(std::string topic_name, std::string frame_id)
-        {
+        void publishScan(std::string topic_name, std::string frame_id, float scan_time, float time_increment,
+                         float angle_increment, float angle_max, float angle_min, float range_max, float range_min,
+                         std::vector<float> ranges, std::vector<float> intensities);
 
-        }
+        void publishOccupancyGrid(std::string topic_name, std::string frame_id, int height, int width, float resolution,
+                                  float origin_x, float origin_y, float origin_theta, const std::vector<uint8_t> &data);
 
         void publishPose(std::string topic_name, std::string frame_id, float x, float y, float theta);
 
@@ -279,6 +281,7 @@ namespace ros_bridge_client
         std::string namespace_{"robot"};
         std::string sub_address_{"tcp://localhost:5557"};
         std::string pub_address_{"tcp://*:5556"};
+        float frequency_{100.0f}, interval_{1.0f / frequency_};
         void *context_, *publisher_, *subscriber_;
         int res_;
         std::mutex publisher_mtx_;

@@ -20,22 +20,29 @@ namespace ros_bridge_client
         {
             if (reader.parse(param_stream, param_root))
             {
-                if (!param_root["namespace"].asString().empty())
+                if (!param_root["namespace"].empty())
                 {
                     namespace_ = param_root["namespace"].asString();
                     std::cout << "Get namespace from parameters file: " << namespace_ << std::endl;
                 }
 
-                if (!param_root["pub_address"].asString().empty())
+                if (!param_root["pub_address"].empty())
                 {
                     pub_address_ = param_root["pub_address"].asString();
                     std::cout << "Get publish address from parameters file: " << pub_address_ << std::endl;
                 }
 
-                if (!param_root["sub_address"].asString().empty())
+                if (!param_root["sub_address"].empty())
                 {
                     sub_address_ = param_root["sub_address"].asString();
                     std::cout << "Get subscribe address from parameters file: " << sub_address_ << std::endl;
+                }
+
+                if (!param_root["frequency"].empty())
+                {
+                    frequency_ = param_root["frequency"].asFloat();
+                    interval_ = 1.0f / frequency_;
+                    std::cout << "Get frequency from parameters file: " << frequency_ << std::endl;
                 }
             }
         }
@@ -117,6 +124,7 @@ namespace ros_bridge_client
             {
                 continue;
             }
+            free(recv_header);
             auto recv_body = _recv_data(subscriber_, 0);
             if (!recv_body)
             {
@@ -124,8 +132,9 @@ namespace ros_bridge_client
             }
 
             _msg_handle(recv_body);
+            free(recv_body);
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            sleep(interval_);
         }
         already_stop_.store(true);
     }
@@ -155,8 +164,8 @@ namespace ros_bridge_client
     {
         publisher_mtx_.lock();
         auto body = fw_.write(data);
-        zmq_send(publisher_, namespace_.data(), namespace_.size(), ZMQ_DONTWAIT | ZMQ_SNDMORE);
-        zmq_send(publisher_, body.data(), body.size(), ZMQ_DONTWAIT);
+        auto send_size = zmq_send(publisher_, namespace_.data(), namespace_.size(), ZMQ_DONTWAIT | ZMQ_SNDMORE);
+        send_size = zmq_send(publisher_, body.data(), body.size(), ZMQ_DONTWAIT);
         publisher_mtx_.unlock();
     }
 
@@ -165,7 +174,7 @@ namespace ros_bridge_client
         sub_root_.clear();
         if (!reader_.parse(msg, sub_root_))
         {
-            std::cerr << "Environment config file parse failed." << std::endl;
+            std::cerr << "Parse message failed." << std::endl;
         }
         auto topic_name = sub_root_["topic_name"].asString();
 
@@ -206,6 +215,63 @@ namespace ros_bridge_client
         msg["pose"]["position"]["y"] = y;
         msg["pose"]["position"]["z"] = 0.0f;
         msg["pose"]["orientation"]["theta"] = theta;
+
+        _publish_msg(msg);
+    }
+
+    void ROSBridgeClient::publishOccupancyGrid(std::string topic_name, std::string frame_id, int height, int width,
+                                               float resolution, float origin_x, float origin_y, float origin_theta,
+                                               const std::vector<uint8_t> &data)
+    {
+        Json::Value msg;
+        msg["topic_name"] = topic_name;
+        msg["type"] = "nav_msgs::OccupancyGrid";
+        msg["header"]["frame_id"] = frame_id;
+
+        msg["height"] = height;
+        msg["width"] = width;
+        msg["resolution"] = resolution;
+        msg["position"]["x"] = origin_x;
+        msg["position"]["y"] = origin_y;
+        msg["position"]["z"] = 0.0f;
+        msg["orientation"]["theta"] = origin_theta;
+
+        std::string str;
+        str.assign(data.begin(), data.end());
+        msg["data"] = str;
+
+        _publish_msg(msg);
+    }
+
+    void
+    ROSBridgeClient::publishScan(std::string topic_name, std::string frame_id, float scan_time, float time_increment,
+                                 float angle_increment, float angle_max, float angle_min, float range_max,
+                                 float range_min, std::vector<float> ranges, std::vector<float> intensities)
+    {
+        Json::Value msg;
+        msg["topic_name"] = topic_name;
+        msg["type"] = "sensor_msgs::LaserScan";
+        msg["header"]["frame_id"] = frame_id;
+
+        msg["scan_time"] = scan_time;
+        msg["time_increment"] = time_increment;
+        msg["angle_increment"] = angle_increment;
+        msg["angle_max"] = angle_max;
+        msg["angle_min"] = angle_min;
+        msg["range_max"] = range_max;
+        msg["range_min"] = range_min;
+
+        auto &rs = msg["ranges"];
+        for (const auto &r : ranges)
+        {
+            rs.append(r);
+        }
+
+        auto &is = msg["intensities"];
+        for (const auto &i : intensities)
+        {
+            is.append(i);
+        }
 
         _publish_msg(msg);
     }

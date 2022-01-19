@@ -72,10 +72,9 @@ int main()
 
     while (is_running.load())
     {
+        rbc.publishPoint("/point_test", "map", GetRandom(range), GetRandom(range));
 
-        rbc.publishPoint("/robot/start_pose", "map", GetRandom(range), GetRandom(range));
-        rbc.publishPoint("/robot/goal_pose", "map", GetRandom(range), GetRandom(range));
-
+        // 路径消息测试
         std::vector<ros_bridge_client::Point> points;
         ros_bridge_client::Point p;
         p.x = GetRandom(range);
@@ -87,8 +86,9 @@ int main()
         p.x = GetRandom(range);
         p.y = GetRandom(range);
         points.emplace_back(p);
-        rbc.publishPath("/path", "map", points);
+        rbc.publishPath("/path_test", "map", points);
 
+        // 点集消息测试
         points.clear();
         p.x = -1.0;
         p.y = -2.0;
@@ -104,6 +104,7 @@ int main()
         points.emplace_back(p);
         rbc.publishPoints("/points_test", "map", points, 0.2, 0.5, 0.0, 1.0, 1.0, 0.5);
 
+        // 条带消息测试
         points.clear();
         p.x = 1.0;
         p.y = -1.0;
@@ -123,6 +124,7 @@ int main()
         rbc.publishLineStrip("/line_strip_test", "map", points, 0.1, 1.0, 0.0, 1.0, 0.6);
 
 
+        // 多线条消息测试
         // 点数必须为奇数
         points.clear();
         p.x = -1.0;
@@ -145,6 +147,7 @@ int main()
         points.emplace_back(p);
         rbc.publishLineList("/line_list_test", "map", points, 0.1, 0.5, 0.4, 1.0, 0.6);
 
+        // 多边形消息测试
         points.clear();
         p.x = 2.0;
         p.y = 2.0;
@@ -166,11 +169,14 @@ int main()
         points.emplace_back(p);
         rbc.publishPolygon("/polygon_test", "map", points);
 
+        // tf消息测试
         rbc.publishTf("/tf", "map", "odom", 1.0f, 1.0f, 0.0f);
         rbc.publishTf("/tf", "odom", "base_frame", 1.0f, -2.0f, 3.14f);
 
+        // 单位姿消息测试
         rbc.publishPose("/pose_test", "map", GetRandom(range), GetRandom(range), GetRandom(3.14));
 
+        // 多位姿消息测试
         std::vector<ros_bridge_client::Pose> poses;
         ros_bridge_client::Pose pose;
         pose.x = 1.0;
@@ -187,8 +193,38 @@ int main()
         poses.emplace_back(pose);
         rbc.publishPoses("/poses_test", "map", poses);
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        // 占据栅格地图消息测试
+        std::vector<uint8_t> map;
+        map.emplace_back(0);
+        map.emplace_back(30);
+        map.emplace_back(60);
+        map.emplace_back(90);
+        map.emplace_back(110);
+        map.emplace_back(252);
+        map.emplace_back(253);
+        map.emplace_back(254);
+        map.emplace_back(255);
+        rbc.publishOccupancyGrid("/map_test", "map", 3, 3, 0.05f, 1.0f, 1.0f, angles::from_degrees(0.0f), map);
 
+        // 激光消息测试
+        std::vector<float> ranges, intensities;
+        ranges.emplace_back(3.0);
+        ranges.emplace_back(3.0);
+        ranges.emplace_back(3.0);
+        ranges.emplace_back(3.0);
+        ranges.emplace_back(3.0);
+        ranges.emplace_back(3.0);
+        intensities.emplace_back(1.0);
+        intensities.emplace_back(1.0);
+        intensities.emplace_back(1.0);
+        intensities.emplace_back(1.0);
+        intensities.emplace_back(1.0);
+        intensities.emplace_back(1.0);
+        rbc.publishScan("/scan_test", "map", 0.006, 0.001,
+                        angles::from_degrees(60), angles::from_degrees(180),
+                        angles::from_degrees(-180), 5.0f, 0.05f, ranges, intensities);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
     return 0;
